@@ -131,7 +131,7 @@ public abstract class Net_listener {
             Connection conn = connected_client.get(pair_usr);
 
             //chiede al client pair_usr se vuole essere appaiato con usr
-            conn.write("pair:" + usr, false, act);
+            conn.write(("pair:" + usr).getBytes(), act);
 
             return true;
         }
@@ -141,7 +141,7 @@ public abstract class Net_listener {
         }
     }
 
-    public static synchronized void pair(String usr1, String usr2) throws InvocationTargetException, InstantiationException, IllegalAccessException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException { //imposta questi due client come appaiati
+    public static synchronized void pair(String usr1, String usr2, byte conv_code1, byte conv_code2) throws InvocationTargetException, InstantiationException, IllegalAccessException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException { //imposta questi due client come appaiati
         Clients_panel.pair_clients(usr1, usr2);
 
         paired_client.replace(usr1, true);
@@ -154,8 +154,8 @@ public abstract class Net_listener {
         conn2.pair(conn1);
 
         //avvisa i due client che l'appaiamento è andato a buon fine
-        conn2.write("\001", true);
-        conn1.write("\001", true);
+        conn2.write(conv_code2, "\001".getBytes());
+        conn1.write(conv_code1, "\001".getBytes());
 
         num_pair += 1;
     }
@@ -167,8 +167,8 @@ public abstract class Net_listener {
         paired_client.replace(usr2, false);
 
         if (notify_clients) { //se deve avvisare i client che sono stati scollegati
-            connected_client.get(usr1).write("EOC", false);
-            connected_client.get(usr2).write("EOC", false);
+            connected_client.get(usr1).write("EOC");
+            connected_client.get(usr2).write("EOC");
         }
 
         num_pair -= 1;
@@ -205,7 +205,7 @@ public abstract class Net_listener {
     public static void disconnect(String name, boolean send_list) throws IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException {
         Connection conn = connected_client.get(name);
 
-        conn.write("EOC", false); //notifica il client che chiude la connessione
+        conn.write("EOC"); //notifica il client che chiude la connessione
 
         Terminal_panel.terminal_write("disconnessione dal client " + conn.get_username() + "\n", false);
         if (conn.get_username() != null) { //se è già registrato in Net_listener
@@ -281,10 +281,10 @@ public abstract class Net_listener {
         }
 
         if (msg.length() != 7) {
-            conn.write(msg.substring(0, msg.length() - 1), false);
+            conn.write(msg.substring(0, msg.length() - 1));
         }
         else {
-            conn.write(msg.substring(0, msg.length()), false);
+            conn.write(msg.substring(0, msg.length()));
         }
     }
 

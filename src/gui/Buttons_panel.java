@@ -46,8 +46,8 @@ public abstract class Buttons_panel {
             stop.setPreferredSize(new Dimension(30, 30));
             start.setPreferredSize(new Dimension(30, 30));
             sep.setPreferredSize(new Dimension(1, 25));
-            buttons_list.add(stop);
             buttons_list.add(start);
+            buttons_list.add(stop);
             buttons_list.add(sep); //separator
 
             right_shift.setIcon(new ImageIcon(Buttons_panel.class.getResource("/images/right_arrow.png")));
