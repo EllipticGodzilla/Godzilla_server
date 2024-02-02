@@ -119,6 +119,10 @@ public abstract class Net_listener {
         new_client(usr, c);
     }
 
+    public static boolean change_psw(String usr, byte[] new_psw) {
+        return users_credentials.replace(usr, new_psw) != null;
+    }
+
     //si è connesso e registrato / fatto il login un nuovo utente
     private static void new_client(String usr, Connection c) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidKeyException {
         connected_client.put(usr, c); //aggiunge il client alla lista dei client connessi
@@ -301,7 +305,7 @@ public abstract class Net_listener {
         }
     }
 
-    private static byte[] sha3(byte[] msg) {
+    public static byte[] sha3(byte[] msg) {
         return sha3_digest.digest(msg);
     }
 }

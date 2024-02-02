@@ -10,6 +10,7 @@ import java.awt.event.*;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -620,8 +621,45 @@ abstract class ClientsList {
             ClientsList.remove(cell_txt); //rimuove la casella dalla lista
         };
 
+        private StringVectorOperator change_psw = new StringVectorOperator() {
+            @Override
+            public void success() {
+                if (!check_password(input.elementAt(0), input.elementAt(1))) { //se le due password inserite non sono uguali
+                    TempPanel.show(new TempPanel_info("le password inserite non sono uguali", false), null);
+                }
+                else {
+                    String psw = input.elementAt(0);
+                    byte[] hash = calculate_hash(psw); //calcola l'hash della nuova password
+
+                    Net_listener.change_psw(cell_txt, hash); //cambia la password del client
+                    TempPanel.show(new TempPanel_info("password di " + cell_txt + " cambiata con successo", false), null);
+                }
+            }
+
+            private boolean check_password(String psw1, String psw2) {
+                return psw1.equals(psw2);
+            }
+
+            private byte[] calculate_hash(String psw) {
+                byte[] usr_inverse = cell_txt.getBytes();
+
+                for (int i = 0; i < cell_txt.length(); i++) {
+                    usr_inverse[i] = (byte) (usr_inverse[i] ^ 0xff);
+                }
+
+                int psw_len = psw.length();
+                byte[] hash = Arrays.copyOf(psw.getBytes(), psw_len + usr_inverse.length); //aumenta la lunghezza di psw[]
+                System.arraycopy(usr_inverse, 0, hash, psw_len, usr_inverse.length); //copia usr_inverse[] in psw[]
+
+                return Net_listener.sha3(Net_listener.sha3(hash)); //ritorna il doppio hash di psw[] che viene salvato nella tabella in Net_listener
+            }
+
+            @Override
+            public void fail() {} //se non vuole più cambiare la password
+        };
+
         private ActionListener offline_changePsw_listener = e -> {
-            //devo aggiungere TempPanel prima
+            TempPanel.show(new TempPanel_info("inserisci la nuova password: ", "inseriscila nuovamente: ").set_psw_indices(0, 1), change_psw);
         };
 
         private void reset() { //resetta la lista di menu item nel popup

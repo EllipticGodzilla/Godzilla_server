@@ -4,17 +4,13 @@
 
 package gui;
 
-import network.Net_listener;
-
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Vector;
 
 public abstract class Server_frame {
@@ -30,6 +26,7 @@ public abstract class Server_frame {
     private static JPanel terminal_p;
     private static JPanel buttons_p;
     private static JPanel clients_p;
+    private static JPanel temp_panel;
 
     public static JFrame init() throws IOException, InvocationTargetException, NoSuchMethodException, IllegalAccessException, InstantiationException {
         //inizializza la grafica
@@ -46,12 +43,14 @@ public abstract class Server_frame {
         main_panel.setBackground(new Color(58, 61, 63));
         main_panel.setLayout(new GridBagLayout());
 
-        layeredPane.add_fullscreen(main_panel, JLayeredPane.FRAME_CONTENT_LAYER);
-
         //inizializza i pannelli che formano la schermata principale
         terminal_p = Terminal_panel.init();
         buttons_p = Buttons_panel.init();
         clients_p = Clients_panel.init();
+        temp_panel = TempPanel.init();
+
+        layeredPane.add_fullscreen(main_panel, JLayeredPane.FRAME_CONTENT_LAYER);
+        layeredPane.add(temp_panel, JLayeredPane.POPUP_LAYER);
 
         //aggiunge i pannelli al main_panel
         GridBagConstraints c = new GridBagConstraints();
@@ -81,7 +80,30 @@ public abstract class Server_frame {
         frame.setBounds(100, 100, 200, 200);
         frame.setVisible(true);
 
+        frame.addComponentListener(new ComponentListener() {
+            @Override
+            public void componentMoved(ComponentEvent e) {}
+            @Override
+            public void componentShown(ComponentEvent e) {}
+
+            @Override
+            public void componentHidden(ComponentEvent e) {}
+            @Override
+            public void componentResized(ComponentEvent e) {
+                if (temp_panel.isVisible()) { //se temp panel è visibile lo ricentra ogni volta che viene ridimensionato il frame
+                    recenter_TempPanel();
+                }
+            }
+        });
+
         return frame;
+    }
+
+    public static void recenter_TempPanel() { //ricentra il pannello TempPanel
+        temp_panel.setLocation(
+                frame.getWidth() / 2 - temp_panel.getWidth() / 2,
+                frame.getHeight() / 2 - temp_panel.getHeight() / 2
+        );
     }
 }
 

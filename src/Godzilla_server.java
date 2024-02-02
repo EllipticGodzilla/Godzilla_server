@@ -1,4 +1,6 @@
 import gui.Server_frame;
+import gui.TempPanel;
+import gui.TempPanel_info;
 import gui.Terminal_panel;
 import network.Net_listener;
 
