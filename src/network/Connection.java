@@ -58,10 +58,6 @@ public class Connection {
         direct_write(msg_prefix); //se possibile cifra e invia il messaggio
     }
 
-    public void direct_write(String msg) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidKeyException {
-        direct_write(msg.getBytes());
-    }
-
     public void direct_write(byte[] msg) throws IOException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         if (secure) { //è una connessione sicura cifra il messaggio
             msg = cipher.encode(msg);
@@ -71,16 +67,6 @@ public class Connection {
         output.write(msg); //invia il messaggio
 
         output.flush();
-    }
-
-    public String wait_for_string() { //se non è una connessione dinamica, attende che venga inviata una stringa
-        if (!dynamic) {
-            return new String(wait_for_bytes());
-        }
-        else {
-            Terminal_panel.terminal_write("wait_for_string() può essere utilizzato solamente quando la connessione non è dinamica!\n", true);
-            throw new RuntimeException("wait_for_string() is a only non-dynamic connection function!");
-        }
     }
 
     public byte[] wait_for_bytes() { //se non è una connessione dinamica, attende che vengano inviati dei bytes
@@ -141,6 +127,8 @@ public class Connection {
     public void pair(Connection conn) {
         receiver.set_paired(conn);
     }
+
+    public String get_paired() { return receiver.get_paired(); }
 
     public void unpair() throws InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidKeyException, InstantiationException, IllegalAccessException, InvocationTargetException {
         receiver.unpair("");
@@ -269,11 +257,14 @@ class Receiver {
             byte[] pwd = Arrays.copyOfRange(msg, pwd_off + 1, msg.length);
 
             if (Net_listener.exist(usr, pwd) && !Net_listener.online(usr)) { //se le credenziali sono corrette e questo utente non è già online
+                Terminal_panel.terminal_write("il client " + usr + " ha appena eseguito il login\n", false);
+
                 conn.write(conv_code, "log".getBytes());
                 conn.set_username(usr);
                 Net_listener.login(usr, conn);
             }
             else { //se il login fallisce
+                Terminal_panel.terminal_write("tentativo di login a " + usr + " fallito\n", true);
                 conn.write(conv_code, "err".getBytes());
             }
         }
@@ -283,11 +274,15 @@ class Receiver {
             byte[] pwd = Arrays.copyOfRange(msg, pwd_off + 1, msg.length);
 
             if (Net_listener.register_account(usr, pwd)) { //riesce a creare il nuovo account
+                Terminal_panel.terminal_write("è stato creato il nuovo account " + usr + "\n", false);
+
                 conn.write(conv_code, "reg".getBytes());
                 conn.set_username(usr);
-                Net_listener.login(usr, conn);
+                Net_listener.register(usr, conn);
             }
             else { //la registrazione è fallita
+                Terminal_panel.terminal_write("tentativo di creare l'account " + usr + " fallito\n", true);
+
                 conn.write(conv_code, "err".getBytes());
             }
         }
@@ -316,6 +311,10 @@ class Receiver {
         if (!Net_listener.request_pair(name, username, pair_act)) { //se il client a cui ci si vuole collegare è già appaiato
             conn.write(conv_code, "\000".getBytes());
         }
+    }
+
+    public String get_paired() {
+        return paired_conn.get_username();
     }
 
     private PairingResponse pair_act = new PairingResponse() {

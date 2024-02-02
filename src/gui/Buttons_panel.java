@@ -50,20 +50,20 @@ public abstract class Buttons_panel {
             buttons_list.add(stop);
             buttons_list.add(sep); //separator
 
-            right_shift.setIcon(new ImageIcon(Buttons_panel.class.getResource("/images/right_arrow.png")));
-            right_shift.setRolloverIcon(new ImageIcon(Buttons_panel.class.getResource("/images/right_arrow_sel.png")));
-            right_shift.setPressedIcon(new ImageIcon(Buttons_panel.class.getResource("/images/right_arrow_pres.png")));
-            left_shift.setIcon(new ImageIcon(Buttons_panel.class.getResource("/images/left_arrow.png")));
-            left_shift.setRolloverIcon(new ImageIcon(Buttons_panel.class.getResource("/images/left_arrow_sel.png")));
-            left_shift.setPressedIcon(new ImageIcon(Buttons_panel.class.getResource("/images/left_arrow_pres.png")));
-            start.setIcon(new ImageIcon(Buttons_panel.class.getResource("/images/start.png")));
-            start.setRolloverIcon(new ImageIcon(Buttons_panel.class.getResource("/images/start_sel.png")));
-            start.setPressedIcon(new ImageIcon(Buttons_panel.class.getResource("/images/start_pres.png")));
-            start.setDisabledIcon(new ImageIcon(Buttons_panel.class.getResource("/images/start_dis.png")));
-            stop.setIcon(new ImageIcon(Buttons_panel.class.getResource("/images/stop.png")));
-            stop.setRolloverIcon(new ImageIcon(Buttons_panel.class.getResource("/images/stop_sel.png")));
-            stop.setPressedIcon(new ImageIcon(Buttons_panel.class.getResource("/images/stop_pres.png")));
-            stop.setDisabledIcon(new ImageIcon(Buttons_panel.class.getResource("/images/stop_dis.png")));
+            right_shift.setIcon(new ImageIcon(Server_frame.project_path + "/images/right_arrow.png"));
+            right_shift.setRolloverIcon(new ImageIcon(Server_frame.project_path + "/images/right_arrow_sel.png"));
+            right_shift.setPressedIcon(new ImageIcon(Server_frame.project_path + "/images/right_arrow_pres.png"));
+            left_shift.setIcon(new ImageIcon(Server_frame.project_path + "/images/left_arrow.png"));
+            left_shift.setRolloverIcon(new ImageIcon(Server_frame.project_path + "/images/left_arrow_sel.png"));
+            left_shift.setPressedIcon(new ImageIcon(Server_frame.project_path + "/images/left_arrow_pres.png"));
+            start.setIcon(new ImageIcon(Server_frame.project_path + "/images/start.png"));
+            start.setRolloverIcon(new ImageIcon(Server_frame.project_path + "/images/start_sel.png"));
+            start.setPressedIcon(new ImageIcon(Server_frame.project_path + "/images/start_pres.png"));
+            start.setDisabledIcon(new ImageIcon(Server_frame.project_path + "/images/start_dis.png"));
+            stop.setIcon(new ImageIcon(Server_frame.project_path + "/images/stop.png"));
+            stop.setRolloverIcon(new ImageIcon(Server_frame.project_path + "/images/stop_sel.png"));
+            stop.setPressedIcon(new ImageIcon(Server_frame.project_path + "/images/stop_pres.png"));
+            stop.setDisabledIcon(new ImageIcon(Server_frame.project_path + "/images/stop_dis.png"));
 
             right_shift.setBorder(null);
             left_shift.setBorder(null);
@@ -106,13 +106,13 @@ public abstract class Buttons_panel {
 
     public static void init_buttons() throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Terminal_panel.terminal_write("inizializzo i bottoni nella gui:", false);
-        File buttons_folder = new File(Server_frame.project_path + "buttons");
+        File buttons_folder = new File(Server_frame.project_path + "/mod");
         String[] button_class_files = buttons_folder.list();
 
         class Button_class extends ClassLoader {
             public Class find_class(String class_name) throws IOException {
-                byte[] class_data = new FileInputStream(Server_frame.project_path + "buttons/" + class_name + ".class").readAllBytes(); //read file
-                return defineClass("buttons." + class_name, class_data, 0, class_data.length); //define class
+                byte[] class_data = new FileInputStream(Server_frame.project_path + "/mod/" + class_name + ".class").readAllBytes(); //read file
+                return defineClass(class_name, class_data, 0, class_data.length); //define class
             }
         }
         Button_class class_gen = new Button_class();

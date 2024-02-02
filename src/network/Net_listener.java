@@ -1,6 +1,7 @@
 package network;
 
 import gui.Clients_panel;
+import gui.Server_frame;
 import gui.Terminal_panel;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -28,18 +29,18 @@ public abstract class Net_listener {
     private static Map<String, byte[]> users_credentials = new LinkedHashMap<>();
     private static MessageDigest sha3_digest;
 
-    private static int num_pair = 0;
-
     private static ServerSocket ss = null;
     private static final int PORT = 31415;
+
+    public static void init() throws NoSuchAlgorithmException, NoSuchPaddingException, IOException, InvalidKeySpecException, InvalidKeyException {
+        sha3_digest = MessageDigest.getInstance("sha3-256");
+
+        init_ce_server_info();
+        init_users_credentialis();
+    }
+
     public static void start() {
         try {
-            if (ss == null) {
-                sha3_digest = MessageDigest.getInstance("sha3-256");
-
-                init_ce_server_info();
-                init_users_credentialis();
-            }
             ss = new ServerSocket(PORT);
 
             new Thread(() -> {
@@ -63,17 +64,19 @@ public abstract class Net_listener {
             try {
                 disconnect(); //disconnette tutti i client
                 ss.close(); //chiude il socket
-
-                Clients_panel.clean_list();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
+    public static String[] registered_account() {
+        return users_credentials.keySet().toArray(new String[0]);
+    }
+
     public static void logout(String usr, boolean send_list) throws IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException {
         connected_client.remove(usr);
-        Clients_panel.remove_client(usr);
+        Clients_panel.offline_client(usr);
         paired_client.remove(usr);
 
         if (send_list) { //invia a tutti i client la lista aggiornata
@@ -106,9 +109,19 @@ public abstract class Net_listener {
         return connected_client.containsKey(usr);
     }
 
-    public static void login(String usr, Connection c) throws IllegalBlockSizeException, IOException, BadPaddingException, InvocationTargetException, InstantiationException, IllegalAccessException, InvalidAlgorithmParameterException, InvalidKeyException {
+    public static void login(String usr, Connection c) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidKeyException {
+        Clients_panel.login_client(usr);
+        new_client(usr, c);
+    }
+
+    public static void register(String usr, Connection c) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidKeyException {
+        Clients_panel.register_client(usr);
+        new_client(usr, c);
+    }
+
+    //si è connesso e registrato / fatto il login un nuovo utente
+    private static void new_client(String usr, Connection c) throws InvalidAlgorithmParameterException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidKeyException {
         connected_client.put(usr, c); //aggiunge il client alla lista dei client connessi
-        Clients_panel.add_client(usr);
         paired_client.put(usr, false); //specifica che questo client non è ancora appaiato
         String[] clients = connected_client.keySet().toArray(new String[0]);
 
@@ -116,12 +129,6 @@ public abstract class Net_listener {
         for (Connection conn : connected_client.values()) {
             send_clients_update(clients, conn);
         }
-
-        Terminal_panel.terminal_write("il client " + usr + " ha appena eseguito il login\n", false);
-    }
-
-    public static synchronized int paired_num() {
-        return num_pair;
     }
 
     //se il client con username = pair_usr non è appaiato con nessuno chiede se vuole essere appaiato ad "usr"
@@ -156,11 +163,18 @@ public abstract class Net_listener {
         //avvisa i due client che l'appaiamento è andato a buon fine
         conn2.write(conv_code2, "\001".getBytes());
         conn1.write(conv_code1, "\001".getBytes());
-
-        num_pair += 1;
     }
 
-    public static synchronized void unpair(String usr1, String usr2, boolean notify_clients) throws InvocationTargetException, InstantiationException, IllegalAccessException, IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException { //imposta questi due client come non appaiati
+    public static synchronized String get_paired(String usr) {
+        if (paired_client.get(usr)) { //se effettivamente il client è appaiato
+            return connected_client.get(usr).get_paired();
+        }
+        else {
+            return "";
+        }
+    }
+
+    public static synchronized void unpair(String usr1, String usr2, boolean notify_clients) throws IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException { //imposta questi due client come non appaiati
         Clients_panel.unpair_clients(usr1, usr2);
 
         paired_client.replace(usr1, false);
@@ -170,8 +184,6 @@ public abstract class Net_listener {
             connected_client.get(usr1).write("EOC");
             connected_client.get(usr2).write("EOC");
         }
-
-        num_pair -= 1;
 
         Terminal_panel.terminal_write("i client " + usr1 + " - " + usr2 + " si scollegano\n", false);
     }
@@ -187,6 +199,10 @@ public abstract class Net_listener {
         return diff == 0;
     }
 
+    public static boolean forget(String usr) {
+        return users_credentials.remove(usr) != null;
+    }
+
     public static void save_credentials() throws IOException {
         String file_credentials = "";
         String[] usernames = users_credentials.keySet().toArray(new String[0]);
@@ -195,7 +211,7 @@ public abstract class Net_listener {
         }
 
         if (!file_credentials.equals("")) { //se sono state trovate delle credenziali da salvare
-            FileOutputStream client_cred = new FileOutputStream(Net_listener.class.getResource("/clients_credentials.dat").getPath());
+            FileOutputStream client_cred = new FileOutputStream(Server_frame.project_path + "/database/clients_credentials.dat");
             client_cred.write(file_credentials.getBytes());
 
             client_cred.close();
@@ -215,40 +231,37 @@ public abstract class Net_listener {
         conn.close();
     }
 
-    private static void disconnect() throws IllegalBlockSizeException, IOException, BadPaddingException, InvocationTargetException, InstantiationException, IllegalAccessException, InvalidAlgorithmParameterException, InvalidKeyException {
+    private static void disconnect() throws IllegalBlockSizeException, IOException, BadPaddingException, InvalidAlgorithmParameterException, InvalidKeyException {
         String[] clients = connected_client.keySet().toArray(new String[0]);
+        Clients_panel.offline(clients); //tutti le caselle nella lista diventano offline
 
         for (String name : clients) { //chiude le connessioni con tutti i client
+            if (paired_client.get(name)) { //se questo client è appaiato
+                connected_client.get(name).write((byte) 0x00, "EOC".getBytes()); //scollega questo client
+            }
+
             disconnect(name, false);
         }
     }
 
     private static void init_ce_server_info() throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidKeyException {
-        Terminal_panel.terminal_write("inizializzando le informazioni per il certificato\n", false);
-
-        FileInputStream cert_input = new FileInputStream(Net_listener.class.getResource("/certificate.dat").getPath());
-        FileInputStream info_input = new FileInputStream(Net_listener.class.getResource("/server_info.dat").getPath());
-        FileInputStream prv_input = new FileInputStream(Net_listener.class.getResource("/private.key").getPath());
+        byte[] certificate = Net_listener.class.getClassLoader().getResourceAsStream("files/certificate.dat").readAllBytes();
+        byte[] info = Net_listener.class.getClassLoader().getResourceAsStream("files/server_info.dat").readAllBytes();
+        byte[] prv_key = Net_listener.class.getClassLoader().getResourceAsStream("files/private.key").readAllBytes(); //dovresti cifrare questo file come nel client
 
         //salva certificato e server info
-        certificate = Base64.getDecoder().decode(cert_input.readAllBytes());
-        server_info = info_input.readAllBytes();
-
-        cert_input.close();
-        info_input.close();
+        Net_listener.certificate = Base64.getDecoder().decode(certificate);
+        server_info = info;
 
         //inzializza il cipher per decifrare utilizzando la chiave privata del server
         KeyFactory key_f = KeyFactory.getInstance("RSA");
 
         decoder = Cipher.getInstance("RSA");
-        decoder.init(Cipher.DECRYPT_MODE, key_f.generatePrivate(new PKCS8EncodedKeySpec(prv_input.readAllBytes())));
-
-        prv_input.close();
+        decoder.init(Cipher.DECRYPT_MODE, key_f.generatePrivate(new PKCS8EncodedKeySpec(prv_key)));
     }
 
     private static void init_users_credentialis() throws IOException {
-        Terminal_panel.terminal_write("inizializzando le informazioni per le credenziali dei client\n", false);
-        FileInputStream cred_input = new FileInputStream(Net_listener.class.getResource("/clients_credentials.dat").getPath());
+        FileInputStream cred_input = new FileInputStream(Server_frame.project_path + "/database/clients_credentials.dat");
         String file_txt = new String(cred_input.readAllBytes());
         cred_input.close();
 
